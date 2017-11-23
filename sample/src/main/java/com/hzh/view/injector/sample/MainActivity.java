@@ -34,7 +34,7 @@ public class MainActivity extends AppCompatActivity {
     @OnLongClick(R.id.toastBtn)
     public boolean onLongClick(View view) {
         toast("onLongClick !!!");
-        return false;
+        return true;
     }
 
     private void toast(String msg) {
