@@ -20,6 +20,12 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         ViewInjectorImpl.getInstance().inject(this);
+        toastBtn.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                toastBtn.setText("bind success");
+            }
+        }, 1000);
     }
 
     @OnClick(R.id.toastBtn)
