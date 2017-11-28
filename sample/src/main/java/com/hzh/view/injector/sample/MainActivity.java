@@ -7,10 +7,12 @@ import android.widget.Button;
 import android.widget.Toast;
 
 import com.hzh.view.injector.ViewInjectorImpl;
+import com.hzh.view.injector.anno.ContentView;
 import com.hzh.view.injector.anno.OnClick;
 import com.hzh.view.injector.anno.OnLongClick;
 import com.hzh.view.injector.anno.ViewInject;
 
+@ContentView(R.layout.activity_main)
 public class MainActivity extends AppCompatActivity {
     @ViewInject(R.id.toastBtn)
     public Button toastBtn;
@@ -18,14 +20,9 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
         ViewInjectorImpl.getInstance().inject(this);
-        toastBtn.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                toastBtn.setText("bind success");
-            }
-        }, 1000);
+        //如果绑定成功，按钮的问题就会改为bind success
+        toastBtn.setText("bind success");
     }
 
     @OnClick(R.id.toastBtn)

@@ -1,15 +1,22 @@
 package com.hzh.view.injector;
 
 import android.app.Activity;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
 
+import com.hzh.logger.L;
+import com.hzh.view.injector.anno.ContentView;
 import com.hzh.view.injector.anno.OnClick;
 import com.hzh.view.injector.anno.OnLongClick;
 import com.hzh.view.injector.anno.ViewInject;
 import com.hzh.view.injector.inter.ViewInjector;
+import com.hzh.view.injector.util.ViewFinder;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.util.HashSet;
 
 /**
  * Package: com.hzh.view.injector
@@ -21,6 +28,19 @@ import java.lang.reflect.Method;
  */
 
 public class ViewInjectorImpl implements ViewInjector {
+    private static final HashSet<Class<?>> IGNORED = new HashSet<Class<?>>();
+
+    static {
+        IGNORED.add(Object.class);
+        IGNORED.add(Activity.class);
+        IGNORED.add(android.app.Fragment.class);
+        try {
+            IGNORED.add(Class.forName("android.support.v4.app.Fragment"));
+            IGNORED.add(Class.forName("android.support.v4.app.FragmentActivity"));
+        } catch (Throwable ignored) {
+        }
+    }
+
     private ViewInjectorImpl() {
     }
 
@@ -33,24 +53,99 @@ public class ViewInjectorImpl implements ViewInjector {
     }
 
     @Override
+    public void inject(View view) {
+        injectObject(view, view.getClass(), new ViewFinder(view));
+    }
+
+    @Override
     public void inject(Activity activity) {
-        if (activity == null) {
-            return;
+        //获取ContentView的注解
+        Class<?> handlerType = activity.getClass();
+        try {
+            ContentView contentView = findContentView(handlerType);
+            if (contentView != null) {
+                int viewId = contentView.value();
+                if (viewId > 0) {
+                    Method setContentViewMethod = handlerType.getMethod("setContentView", int.class);
+                    setContentViewMethod.invoke(activity, viewId);
+                }
+            }
+        } catch (Throwable ex) {
+            L.e(ex.getMessage(), ex);
         }
-        bindViewId(activity);
-        bindViewEvent(activity);
+        injectObject(activity, handlerType, new ViewFinder(activity));
+    }
+
+    @Override
+    public void inject(Object target, View view) {
+        injectObject(target, target.getClass(), new ViewFinder(view));
+    }
+
+    @Override
+    public View inject(Object fragment, LayoutInflater inflater, ViewGroup container) {
+        View layout = null;
+        Class<?> clazz = fragment.getClass();
+        try {
+            ContentView contentView = findContentView(clazz);
+            if (contentView != null) {
+                //取出布局id
+                int layoutId = contentView.value();
+                if (layoutId > 0) {
+                    layout = inflater.inflate(layoutId, container, false);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        injectObject(fragment, clazz, new ViewFinder(layout));
+        return layout;
     }
 
     /**
-     * 绑定View的Id
+     * 查找ContentView注解
+     *
+     * @param clazz 类的Class
+     * @return ContentView注解
      */
-    private void bindViewId(Activity activity) {
+    private static ContentView findContentView(Class<?> clazz) {
+        if (clazz == null || IGNORED.contains(clazz)) {
+            return null;
+        }
+        ContentView contentView = clazz.getAnnotation(ContentView.class);
+        //如果没有，递归去父类找
+        if (contentView == null) {
+            return findContentView(clazz.getSuperclass());
+        }
+        return contentView;
+    }
+
+    /**
+     * 最后调入的inject方法
+     *
+     * @param target
+     * @param finder View查找者
+     */
+    public void injectObject(final Object target, Class<?> handlerType, ViewFinder finder) {
+        if (target == null || IGNORED.contains(handlerType)) {
+            return;
+        }
+        injectObject(target, handlerType.getSuperclass(), finder);
+
+        //绑定View控件
         try {
             //1.获取所有的成员变量
-            Class<? extends Activity> clazz = activity.getClass();
+            Class<?> clazz = target.getClass();
             //2.遍历所有成员变量，找到使用了ViewInject注解的成员变量（所有类型，包括private）
             Field[] fields = clazz.getDeclaredFields();
             for (Field field : fields) {
+                Class<?> fieldType = field.getType();
+                //不注入静态变量、final变量，基本数据类型，数组类型变量
+                if (Modifier.isStatic(field.getModifiers())
+                        || Modifier.isFinal(field.getModifiers())
+                        || fieldType.isPrimitive()
+                        || fieldType.isArray()) {
+                    continue;
+                }
                 //设置允许访问
                 field.setAccessible(true);
                 ViewInject annotation = field.getAnnotation(ViewInject.class);
@@ -59,9 +154,11 @@ public class ViewInjectorImpl implements ViewInjector {
                     int id = annotation.value();
                     //4.调用activity的findViewById查找控件
                     if (id > 0) {
-                        View view = activity.findViewById(id);
-                        //5.将控件设置给成员变量
-                        field.set(activity, view);
+                        View view = finder.findViewById(id);
+                        if (view != null) {
+                            //5.将控件设置给成员变量
+                            field.set(target, view);
+                        }
                     } else {
                         throw new RuntimeException("ViewInject annotation must have view value");
                     }
@@ -70,48 +167,50 @@ public class ViewInjectorImpl implements ViewInjector {
         } catch (Exception e) {
             e.printStackTrace();
         }
-    }
 
-    /**
-     * 绑定View的OnClick事件
-     *
-     * @param activity
-     */
-    private void bindViewEvent(final Activity activity) {
+        //绑定onClick和onLongClick
         //1.获取所有的方法
-        Class<? extends Activity> clazz = activity.getClass();
+        Class<?> clazz = target.getClass();
         //2.遍历所有的方法
         Method[] methods = clazz.getDeclaredMethods();
         //3.获取标记了OnClick注解的方法
         for (final Method method : methods) {
+            //不注入静态方法
+            if (Modifier.isStatic(method.getModifiers())) {
+                continue;
+            }
+
             OnClick onClickAnnotation = method.getAnnotation(OnClick.class);
             if (onClickAnnotation != null) {
                 //4.取出id，查找View
                 int id = onClickAnnotation.value();
-                View view = activity.findViewById(id);
+                View view = finder.findViewById(id);
                 //5.给View绑定onClick，点击时执行
-                view.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        try {
-                            Class<?>[] parameterTypes = method.getParameterTypes();
-                            int paramsCount = parameterTypes.length;
-                            if (paramsCount == 0) {
-                                method.invoke(activity, new Object[]{});
-                            } else {
-                                method.invoke(activity, v);
+                if (view != null) {
+                    view.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            try {
+                                Class<?>[] parameterTypes = method.getParameterTypes();
+                                int paramsCount = parameterTypes.length;
+                                if (paramsCount == 0) {
+                                    method.invoke(target, new Object[]{});
+                                } else {
+                                    method.invoke(target, v);
+                                }
+                            } catch (Exception e) {
+                                e.printStackTrace();
                             }
-                        } catch (Exception e) {
-                            e.printStackTrace();
                         }
-                    }
-                });
+                    });
+                }
             }
+
             //长按事件
             OnLongClick onLongAnnotation = method.getAnnotation(OnLongClick.class);
             if (onLongAnnotation != null) {
                 int id = onLongAnnotation.value();
-                View view = activity.findViewById(id);
+                View view = finder.findViewById(id);
                 if (view != null) {
                     view.setOnLongClickListener(new View.OnLongClickListener() {
                         @Override
@@ -119,13 +218,13 @@ public class ViewInjectorImpl implements ViewInjector {
                             try {
                                 Class<?>[] parameterTypes = method.getParameterTypes();
                                 int paramsCount = parameterTypes.length;
-                                Object o;
+                                Object object;
                                 if (paramsCount == 0) {
-                                    o = method.invoke(activity, new Object[]{});
+                                    object = method.invoke(target, new Object[]{});
                                 } else {
-                                    o = method.invoke(activity, new Object[]{v});
+                                    object = method.invoke(target, new Object[]{v});
                                 }
-                                return (boolean) o;
+                                return (boolean) object;
                             } catch (Exception e) {
                                 e.printStackTrace();
                             }
