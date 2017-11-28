@@ -1,11 +1,11 @@
 package com.hzh.view.injector;
 
 import android.app.Activity;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
-import com.hzh.logger.L;
 import com.hzh.view.injector.anno.ContentView;
 import com.hzh.view.injector.anno.OnClick;
 import com.hzh.view.injector.anno.OnLongClick;
@@ -28,15 +28,17 @@ import java.util.HashSet;
  */
 
 public class ViewInjectorImpl implements ViewInjector {
-    private static final HashSet<Class<?>> IGNORED = new HashSet<Class<?>>();
+    private static final String TAG = ViewInjectorImpl.class.getSimpleName();
+    //Android原生的基类不注入，因为无法修改，而且方法和变量巨多，遍历到时忽略掉。
+    private static final HashSet<Class<?>> IGNORED_TYPE = new HashSet<Class<?>>();
 
     static {
-        IGNORED.add(Object.class);
-        IGNORED.add(Activity.class);
-        IGNORED.add(android.app.Fragment.class);
+        IGNORED_TYPE.add(Object.class);
+        IGNORED_TYPE.add(Activity.class);
+        IGNORED_TYPE.add(android.app.Fragment.class);
         try {
-            IGNORED.add(Class.forName("android.support.v4.app.Fragment"));
-            IGNORED.add(Class.forName("android.support.v4.app.FragmentActivity"));
+            IGNORED_TYPE.add(Class.forName("android.support.v4.app.Fragment"));
+            IGNORED_TYPE.add(Class.forName("android.support.v4.app.FragmentActivity"));
         } catch (Throwable ignored) {
         }
     }
@@ -71,7 +73,7 @@ public class ViewInjectorImpl implements ViewInjector {
                 }
             }
         } catch (Throwable ex) {
-            L.e(ex.getMessage(), ex);
+            Log.e(TAG, ex.getMessage(), ex);
         }
         injectObject(activity, handlerType, new ViewFinder(activity));
     }
@@ -108,7 +110,7 @@ public class ViewInjectorImpl implements ViewInjector {
      * @return ContentView注解
      */
     private static ContentView findContentView(Class<?> clazz) {
-        if (clazz == null || IGNORED.contains(clazz)) {
+        if (clazz == null || IGNORED_TYPE.contains(clazz)) {
             return null;
         }
         ContentView contentView = clazz.getAnnotation(ContentView.class);
@@ -126,7 +128,7 @@ public class ViewInjectorImpl implements ViewInjector {
      * @param finder View查找者
      */
     public void injectObject(final Object target, Class<?> handlerType, ViewFinder finder) {
-        if (target == null || IGNORED.contains(handlerType)) {
+        if (target == null || IGNORED_TYPE.contains(handlerType)) {
             return;
         }
         injectObject(target, handlerType.getSuperclass(), finder);
