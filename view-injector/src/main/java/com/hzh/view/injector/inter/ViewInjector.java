@@ -37,5 +37,13 @@ public interface ViewInjector {
      */
     void inject(Object target, View view);
 
+    /**
+     * 注入Fragment
+     *
+     * @param fragment  fragment对象
+     * @param inflater  填充器
+     * @param container 容器
+     * @return
+     */
     View inject(Object fragment, LayoutInflater inflater, ViewGroup container);
 }
