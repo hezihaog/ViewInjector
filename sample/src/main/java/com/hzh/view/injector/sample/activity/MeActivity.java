@@ -5,7 +5,7 @@ import android.support.v7.app.AppCompatActivity;
 
 import com.hzh.view.injector.anno.ContentView;
 import com.hzh.view.injector.sample.R;
-import com.hzh.view.injector.sample.ViewInjectManager;
+import com.hzh.view.injector.ViewInjectManager;
 import com.hzh.view.injector.sample.fragment.MyFragment;
 
 @ContentView(R.layout.activity_me)

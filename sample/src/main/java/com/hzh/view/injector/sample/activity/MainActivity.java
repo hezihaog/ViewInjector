@@ -12,7 +12,7 @@ import com.hzh.view.injector.anno.OnClick;
 import com.hzh.view.injector.anno.OnLongClick;
 import com.hzh.view.injector.anno.ViewInject;
 import com.hzh.view.injector.sample.R;
-import com.hzh.view.injector.sample.ViewInjectManager;
+import com.hzh.view.injector.ViewInjectManager;
 
 @ContentView(R.layout.activity_main)
 public class MainActivity extends AppCompatActivity {

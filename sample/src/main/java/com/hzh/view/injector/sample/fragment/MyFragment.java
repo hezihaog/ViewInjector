@@ -10,7 +10,7 @@ import android.view.ViewGroup;
 import com.hzh.logger.L;
 import com.hzh.view.injector.anno.ContentView;
 import com.hzh.view.injector.sample.R;
-import com.hzh.view.injector.sample.ViewInjectManager;
+import com.hzh.view.injector.ViewInjectManager;
 
 /**
  * Package: com.hzh.view.injector.sample.fragment
