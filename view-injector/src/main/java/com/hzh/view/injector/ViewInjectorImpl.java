@@ -185,54 +185,62 @@ public class ViewInjectorImpl implements ViewInjector {
             OnClick onClickAnnotation = method.getAnnotation(OnClick.class);
             if (onClickAnnotation != null) {
                 //4.取出id，查找View
-                int id = onClickAnnotation.value();
-                View view = finder.findViewById(id);
-                //5.给View绑定onClick，点击时执行
-                if (view != null) {
-                    view.setOnClickListener(new View.OnClickListener() {
-                        @Override
-                        public void onClick(View v) {
-                            try {
-                                Class<?>[] parameterTypes = method.getParameterTypes();
-                                int paramsCount = parameterTypes.length;
-                                if (paramsCount == 0) {
-                                    method.invoke(target, new Object[]{});
-                                } else {
-                                    method.invoke(target, v);
-                                }
-                            } catch (Exception e) {
-                                e.printStackTrace();
+                int[] idList = onClickAnnotation.value();
+                View.OnClickListener onClickListener = new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        try {
+                            Class<?>[] parameterTypes = method.getParameterTypes();
+                            int paramsCount = parameterTypes.length;
+                            if (paramsCount == 0) {
+                                method.invoke(target, new Object[]{});
+                            } else {
+                                method.invoke(target, v);
                             }
+                        } catch (Exception e) {
+                            e.printStackTrace();
                         }
-                    });
+                    }
+                };
+                for (int i = 0; i < idList.length; i++) {
+                    int id = idList[i];
+                    View view = finder.findViewById(id);
+                    //5.给View绑定onClick，点击时执行
+                    if (view != null) {
+                        view.setOnClickListener(onClickListener);
+                    }
                 }
             }
 
             //长按事件
             OnLongClick onLongAnnotation = method.getAnnotation(OnLongClick.class);
             if (onLongAnnotation != null) {
-                int id = onLongAnnotation.value();
-                View view = finder.findViewById(id);
-                if (view != null) {
-                    view.setOnLongClickListener(new View.OnLongClickListener() {
-                        @Override
-                        public boolean onLongClick(View v) {
-                            try {
-                                Class<?>[] parameterTypes = method.getParameterTypes();
-                                int paramsCount = parameterTypes.length;
-                                Object object;
-                                if (paramsCount == 0) {
-                                    object = method.invoke(target, new Object[]{});
-                                } else {
-                                    object = method.invoke(target, new Object[]{v});
-                                }
-                                return (boolean) object;
-                            } catch (Exception e) {
-                                e.printStackTrace();
+                int[] idList = onLongAnnotation.value();
+                View.OnLongClickListener onLongClickListener = new View.OnLongClickListener() {
+                    @Override
+                    public boolean onLongClick(View v) {
+                        try {
+                            Class<?>[] parameterTypes = method.getParameterTypes();
+                            int paramsCount = parameterTypes.length;
+                            Object object;
+                            if (paramsCount == 0) {
+                                object = method.invoke(target, new Object[]{});
+                            } else {
+                                object = method.invoke(target, new Object[]{v});
                             }
-                            return true;
+                            return (boolean) object;
+                        } catch (Exception e) {
+                            e.printStackTrace();
                         }
-                    });
+                        return true;
+                    }
+                };
+                for (int i = 0; i < idList.length; i++) {
+                    int id = idList[i];
+                    View view = finder.findViewById(id);
+                    if (view != null) {
+                        view.setOnLongClickListener(onLongClickListener);
+                    }
                 }
             }
         }

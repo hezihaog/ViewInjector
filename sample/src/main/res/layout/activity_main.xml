@@ -10,5 +10,21 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_centerInParent="true"
-        android:text="start!" />
+        android:text="start" />
+
+    <Button
+        android:id="@+id/clickBtn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/startBtn"
+        android:layout_centerHorizontal="true"
+        android:text="click" />
+
+    <Button
+        android:id="@+id/longClickBtn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/clickBtn"
+        android:layout_centerHorizontal="true"
+        android:text="longClick" />
 </RelativeLayout>

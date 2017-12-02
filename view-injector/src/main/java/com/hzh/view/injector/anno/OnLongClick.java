@@ -17,5 +17,5 @@ import java.lang.annotation.Target;
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
 public @interface OnLongClick {
-    int value();
+    int[] value();
 }
